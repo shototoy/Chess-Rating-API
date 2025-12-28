@@ -12,9 +12,13 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/auth');
 const playerRoutes = require('./routes/players');
+const newsRoutes = require('./routes/news');
+const logsRoutes = require('./routes/logs');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/news', newsRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Health check
 app.get('/', (req, res) => {
