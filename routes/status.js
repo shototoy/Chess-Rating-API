@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getStatus } = require('../controllers/statusController');
+const { getStatus, toggleMaintenance } = require('../controllers/statusController');
 
-// Public endpoint - no authentication required
+// Public endpoints - no authentication required
 router.get('/', getStatus);
+router.post('/toggle', toggleMaintenance);
 
 module.exports = router;
+
