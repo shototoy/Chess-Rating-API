@@ -14,11 +14,14 @@ const authRoutes = require('./routes/auth');
 const playerRoutes = require('./routes/players');
 const newsRoutes = require('./routes/news');
 const logsRoutes = require('./routes/logs');
+const statusRoutes = require('./routes/status');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/status', statusRoutes); // Public endpoint
+
 
 // Health check
 app.get('/', (req, res) => {

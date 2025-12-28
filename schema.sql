@@ -12,6 +12,19 @@ INSERT INTO admin (password_hash)
 SELECT '$2b$10$.eUGbpbY2pb2D20hdHANpeulSodC/fi2m2Rc5Jw6e3seFXk4BqkWa'
 WHERE NOT EXISTS (SELECT 1 FROM admin);
 
+-- App Settings table (for maintenance mode, etc.)
+CREATE TABLE IF NOT EXISTS app_settings (
+    id SERIAL PRIMARY KEY,
+    maintenance_mode BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert default settings
+INSERT INTO app_settings (maintenance_mode) 
+SELECT FALSE
+WHERE NOT EXISTS (SELECT 1 FROM app_settings);
+
+
 -- Players table (ALREADY SEEDED - DO NOT TOUCH)
 -- CREATE TABLE players (
 --     id VARCHAR(50) PRIMARY KEY,
