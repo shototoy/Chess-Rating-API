@@ -7,8 +7,9 @@ CREATE TABLE admin (
 );
 
 -- Insert 'admin123' (Hash: $2b$10$VOC8Or/Ea6mHLuuFkdw8.nDKaLQ9jOdE/H5qCshE.d)
+-- Insert 'admin123' (Verified Hash)
 INSERT INTO admin (password_hash) 
-SELECT '$2b$10$VOC8Or/Ea6mHLuuFkdw8.nDKaLQ9jOdE/H5qCshE.d'
+SELECT '$2b$10$.eUGbpbY2pb2D20hdHANpeulSodC/fi2m2Rc5Jw6e3seFXk4BqkWa'
 WHERE NOT EXISTS (SELECT 1 FROM admin);
 
 -- Players table (ALREADY SEEDED - DO NOT TOUCH)

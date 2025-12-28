@@ -29,10 +29,26 @@ const getPlayers = async (req, res) => {
 // Search players with pagination
 const searchPlayers = async (req, res) => {
     try {
-        const { q, page = 1, limit = 50 } = req.query;
+        const { q, page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
         if (!q) return res.json({ success: true, data: [] });
 
         const offset = (page - 1) * limit;
+
+        // Validate sort column
+        const validColumns = ['first_name', 'last_name', 'rapid_rating'];
+        // Map frontend sort keys to DB columns if needed, assuming 'name' -> 'last_name' or similar logic
+        // But for simplicity let's stick to what we use: 'name' usually implies sorting by last_name then first_name
+        let sortColumn = 'rapid_rating';
+
+        if (sortBy === 'name') {
+            sortColumn = 'last_name, first_name'; // Multi-column sort
+        } else if (sortBy === 'rapid') {
+            sortColumn = 'rapid_rating';
+        } else if (validColumns.includes(sortBy)) {
+            sortColumn = sortBy;
+        }
+
+        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         const query = `
             SELECT * FROM players 
@@ -40,7 +56,7 @@ const searchPlayers = async (req, res) => {
                 LOWER(first_name) LIKE LOWER($1) OR 
                 LOWER(last_name) LIKE LOWER($1) OR 
                 id LIKE $1
-            ORDER BY rapid_rating DESC
+            ORDER BY ${sortColumn} ${sortOrder}
             LIMIT $2 OFFSET $3
         `;
         const result = await pool.query(query, [`%${q}%`, limit, offset]);
