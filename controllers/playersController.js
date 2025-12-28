@@ -8,8 +8,13 @@ const getPlayers = async (req, res) => {
         const offset = (page - 1) * limit;
 
         // Validate sort column to prevent SQL injection
-        const validColumns = ['first_name', 'last_name', 'rapid_rating', 'birth_year', 'id'];
-        const sortColumn = validColumns.includes(sortBy) ? sortBy : 'rapid_rating';
+        // Validate sort column to prevent SQL injection
+        let sortColumn = 'rapid_rating';
+        if (sortBy === 'name') {
+            sortColumn = 'last_name, first_name';
+        } else if (['first_name', 'last_name', 'rapid_rating', 'birth_year', 'id'].includes(sortBy)) {
+            sortColumn = sortBy;
+        }
         const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         const query = `
