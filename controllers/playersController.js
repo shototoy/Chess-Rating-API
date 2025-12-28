@@ -1,10 +1,24 @@
 const pool = require('../db');
 const { logAction } = require('../utils/logger');
 
-// Get all players
+// Get all players with pagination and sorting
 const getPlayers = async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM players ORDER BY rapid_rating DESC');
+        const { page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
+        const offset = (page - 1) * limit;
+
+        // Validate sort column to prevent SQL injection
+        const validColumns = ['first_name', 'last_name', 'rapid_rating', 'birth_year', 'id'];
+        const sortColumn = validColumns.includes(sortBy) ? sortBy : 'rapid_rating';
+        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+        const query = `
+            SELECT * FROM players 
+            ORDER BY ${sortColumn} ${sortOrder} 
+            LIMIT $1 OFFSET $2
+        `;
+
+        const result = await pool.query(query, [limit, offset]);
         res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error fetching players:', error);
@@ -12,11 +26,13 @@ const getPlayers = async (req, res) => {
     }
 };
 
-// Search players
+// Search players with pagination
 const searchPlayers = async (req, res) => {
     try {
-        const { q } = req.query;
+        const { q, page = 1, limit = 50 } = req.query;
         if (!q) return res.json({ success: true, data: [] });
+
+        const offset = (page - 1) * limit;
 
         const query = `
             SELECT * FROM players 
@@ -25,8 +41,9 @@ const searchPlayers = async (req, res) => {
                 LOWER(last_name) LIKE LOWER($1) OR 
                 id LIKE $1
             ORDER BY rapid_rating DESC
+            LIMIT $2 OFFSET $3
         `;
-        const result = await pool.query(query, [`%${q}%`]);
+        const result = await pool.query(query, [`%${q}%`, limit, offset]);
         res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error searching players:', error);
