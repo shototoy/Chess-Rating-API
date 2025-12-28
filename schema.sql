@@ -53,3 +53,27 @@ DROP TABLE IF EXISTS server_logs;
 
 -- CREATE INDEX idx_logs_created ON server_logs(created_at DESC);
 -- CREATE INDEX idx_logs_action ON server_logs(action);
+
+-- Insert Version 1.1 UI Enhancement Announcement
+INSERT INTO news (title, subtitle, category, body, created_at) 
+VALUES (
+    'Version 1.1: Enhanced Visual Experience',
+    'New elegant chess-themed background and improved loading screen',
+    'App Changelog',
+    '## What''s New in Version 1.1
+
+### Visual Enhancements
+- **New Background Design**: Elegant hexagonal pattern with chess piece watermarks across all pages
+- **Improved Loading Screen**: Redesigned with larger progress bar and better visual hierarchy
+- **Consistent Theming**: Chess-inspired design now visible on Home, Search, and Dashboard pages
+
+### Technical Improvements
+- Optimized background rendering with SVG patterns
+- Enhanced user experience during app initialization
+- Cleaner, more modern interface design
+
+The app now features a sophisticated chess-themed aesthetic that reinforces the chess rating platform''s identity while maintaining excellent readability and usability.',
+    CURRENT_TIMESTAMP
+)
+ON CONFLICT DO NOTHING;
+
