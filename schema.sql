@@ -15,7 +15,7 @@ CREATE TABLE players (
     last_name VARCHAR(100) NOT NULL,
     title VARCHAR(10),
     rapid_rating INTEGER NOT NULL,
-    birth_year INTEGER NOT NULL,
+    birth_year INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

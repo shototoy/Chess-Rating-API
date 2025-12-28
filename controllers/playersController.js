@@ -37,12 +37,39 @@ const searchPlayers = async (req, res) => {
 // Add player
 const addPlayer = async (req, res) => {
     try {
-        const { id, firstName, lastName, title, rapidRating, bYear } = req.body;
+        const { firstName, lastName, title, rapidRating, bYear } = req.body;
 
         // Basic validation
-        if (!id || !firstName || !lastName || !rapidRating || !bYear) {
+        if (!firstName || !lastName || !rapidRating) {
             return res.status(400).json({ success: false, error: 'Missing required fields' });
         }
+
+        // Generate ID based on Last Name
+        const letter = lastName.charAt(0).toUpperCase();
+
+        // Find the latest ID that starts with this letter
+        // We look for patterns like 'P%' and order by length desc, then alphabetically desc to catch 'P10000' > 'P9999' correctly if needed
+        // But simply casting substring to int is safer if format is consistent.
+        const idQuery = `
+            SELECT id FROM players 
+            WHERE id LIKE $1 
+            ORDER BY LENGTH(id) DESC, id DESC 
+            LIMIT 1
+        `;
+        const idResult = await pool.query(idQuery, [`${letter}%`]);
+
+        let nextNum = 1;
+        if (idResult.rows.length > 0) {
+            const lastId = idResult.rows[0].id;
+            // Assuming format L00000
+            const numPart = parseInt(lastId.substring(1));
+            if (!isNaN(numPart)) {
+                nextNum = numPart + 1;
+            }
+        }
+
+        // Pad with 5 zeros
+        const newId = `${letter}${nextNum.toString().padStart(5, '0')}`;
 
         const query = `
             INSERT INTO players (id, first_name, last_name, title, rapid_rating, birth_year)
@@ -50,12 +77,12 @@ const addPlayer = async (req, res) => {
             RETURNING *
         `;
 
-        const values = [id, firstName, lastName, title || '', rapidRating, bYear];
+        const values = [newId, firstName, lastName, title || '', rapidRating, bYear || null];
         const result = await pool.query(query, values);
         const newPlayer = result.rows[0];
 
         // Log action
-        await logAction('PLAYER_ADDED', 'player', id, {
+        await logAction('PLAYER_ADDED', 'player', newId, {
             name: `${lastName}, ${firstName}`,
             rating: rapidRating
         });
@@ -83,7 +110,7 @@ const updatePlayer = async (req, res) => {
             RETURNING *
         `;
 
-        const values = [firstName, lastName, title, rapidRating, bYear, id];
+        const values = [firstName, lastName, title, rapidRating, bYear || null, id];
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
