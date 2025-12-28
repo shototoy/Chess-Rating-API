@@ -4,19 +4,20 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { comparePassword, hashPassword } = require('../utils/hash');
 
-// Login
+// Login (Password Only)
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { password } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ success: false, error: 'Username and password required' });
+        if (!password) {
+            return res.status(400).json({ success: false, error: 'Password required' });
         }
 
-        const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
+        // Get the single admin row
+        const result = await pool.query('SELECT * FROM admin LIMIT 1');
 
         if (result.rows.length === 0) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+            return res.status(500).json({ success: false, error: 'Admin not initialized' });
         }
 
         const admin = result.rows[0];
@@ -27,7 +28,7 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: admin.id, username: admin.username },
+            { id: admin.id, role: 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
@@ -35,7 +36,7 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            admin: { id: admin.id, username: admin.username }
+            admin: { id: admin.id, role: 'admin' }
         });
     } catch (error) {
         console.error('Login error:', error);
