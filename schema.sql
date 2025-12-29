@@ -67,6 +67,33 @@ DROP TABLE IF EXISTS server_logs;
 -- CREATE INDEX idx_logs_created ON server_logs(created_at DESC);
 -- CREATE INDEX idx_logs_action ON server_logs(action);
 
+-- Ensure created_at and updated_at columns exist for players and news
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='created_at') THEN
+        ALTER TABLE players ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='updated_at') THEN
+        ALTER TABLE players ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='news' AND column_name='created_at') THEN
+        ALTER TABLE news ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='news' AND column_name='updated_at') THEN
+        ALTER TABLE news ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END$$;
+
+-- Create logs table for all adds and updates
+CREATE TABLE IF NOT EXISTS logs (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    row_id TEXT NOT NULL,
+    action TEXT NOT NULL, -- 'add' or 'update'
+    data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert Version 1.1 UI Enhancement Announcement
 INSERT INTO news (title, subtitle, category, body, created_at) 
 VALUES (

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const { exec } = require('child_process');
 const app = express();
 const PORT = process.env.PORT || 3001;
 app.use(cors());
@@ -23,12 +24,19 @@ app.get('/', (req, res) => {
         status: 'running'
     });
 });
-app.get('/download-seed', (req, res) => {
+app.get('/api/download-seed', (req, res) => {
   const filePath = path.join(__dirname, 'new_seed.sql');
-  res.download(filePath, 'new_seed.sql', err => {
+  // Run export script first
+  exec('node exportIncremental.js', { cwd: __dirname }, (err, stdout, stderr) => {
     if (err) {
-      res.status(404).send('Seed file not found.');
+      console.error('Export script error:', err, stderr);
+      return res.status(500).send('Failed to generate seed file.');
     }
+    res.download(filePath, 'new_seed.sql', err => {
+      if (err) {
+        res.status(404).send('Seed file not found.');
+      }
+    });
   });
 });
 app.listen(PORT, () => {
