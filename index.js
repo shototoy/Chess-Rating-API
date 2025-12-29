@@ -24,20 +24,15 @@ app.get('/', (req, res) => {
         status: 'running'
     });
 });
-app.get('/api/download-seed', (req, res) => {
-  const filePath = path.join(__dirname, 'new_seed.sql');
-  // Run export script first
-  exec('node exportIncremental.js', { cwd: __dirname }, (err, stdout, stderr) => {
-    if (err) {
-      console.error('Export script error:', err, stderr);
-      return res.status(500).send('Failed to generate seed file.');
-    }
-    res.download(filePath, 'new_seed.sql', err => {
-      if (err) {
-        res.status(404).send('Seed file not found.');
-      }
-    });
-  });
+app.get('/api/download-seed', async (req, res) => {
+  try {
+    const pool = require('./db');
+    const { rows } = await pool.query('SELECT * FROM logs ORDER BY created_at ASC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Failed to fetch logs:', err);
+    res.status(500).send('Failed to fetch logs.');
+  }
 });
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
