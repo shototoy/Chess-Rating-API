@@ -16,7 +16,7 @@ async function exportInserts() {
     let sql = '';
     // Get all add/update logs since baseline
     const logsRes = await client.query(
-      `SELECT * FROM logs WHERE created_at > $1 AND action IN ('add', 'update') ORDER BY created_at ASC`,
+      `SELECT * FROM logs WHERE created_at > $1 AND action IN ('added', 'updated') ORDER BY created_at ASC`,
       [BASELINE_DATE]
     );
     for (const log of logsRes.rows) {
