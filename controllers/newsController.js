@@ -43,11 +43,8 @@ const addNews = async (req, res) => {
         const result = await pool.query(query, values);
         const newItem = result.rows[0];
 
-        // Log action
-        await logAction('NEWS_ADDED', 'news', newItem.id, {
-            title,
-            category
-        });
+        // Log action with full row data
+        await logAction('NEWS_ADDED', 'news', newItem.id, newItem);
 
         if (redis.isOpen) {
             const keys = await redis.keys('news*');

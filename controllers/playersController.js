@@ -125,11 +125,8 @@ const addPlayer = async (req, res) => {
         const result = await pool.query(query, values);
         const newPlayer = result.rows[0];
 
-        // Log action
-        await logAction('PLAYER_ADDED', 'player', newId, {
-            name: `${lastName}, ${firstName}`,
-            rating: rapidRating
-        });
+        // Log action with full row data
+        await logAction('PLAYER_ADDED', 'player', newId, newPlayer);
 
         if (redis.isOpen) {
             const keys = await redis.keys('players*');
@@ -169,11 +166,8 @@ const updatePlayer = async (req, res) => {
 
         const updatedPlayer = result.rows[0];
 
-        // Log action
-        await logAction('PLAYER_UPDATED', 'player', id, {
-            name: `${lastName}, ${firstName}`,
-            rating: rapidRating
-        });
+        // Log action with full row data
+        await logAction('PLAYER_UPDATED', 'player', id, updatedPlayer);
 
         if (redis.isOpen) {
             const keys = await redis.keys('players*');
