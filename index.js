@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 app.use(cors());
@@ -21,6 +22,14 @@ app.get('/', (req, res) => {
         version: '1.0.0',
         status: 'running'
     });
+});
+app.get('/download-seed', (req, res) => {
+  const filePath = path.join(__dirname, 'new_seed.sql');
+  res.download(filePath, 'new_seed.sql', err => {
+    if (err) {
+      res.status(404).send('Seed file not found.');
+    }
+  });
 });
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
