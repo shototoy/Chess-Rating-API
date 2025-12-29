@@ -1,20 +1,29 @@
+
 const { createClient } = require('redis');
 
-// REDIS_URL should be set in your Railway environment variables
-const redisUrl = process.env.REDIS_URL;
+const redisUrl = process.env.REDIS_URL || `redis://default:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`;
 const redisClient = createClient({ url: redisUrl });
+
+let isConnected = false;
 
 redisClient.on('error', (err) => {
     console.error('Redis Client Error', err);
+    isConnected = false;
+});
+
+redisClient.on('connect', () => {
+    console.log('Connected to Redis');
+    isConnected = true;
 });
 
 (async () => {
-    if (redisUrl) {
+    try {
         await redisClient.connect();
-        console.log('Connected to Redis');
-    } else {
-        console.warn('REDIS_URL not set. Redis caching is disabled.');
+    } catch (err) {
+        console.warn('Redis connection failed:', err);
     }
 })();
+
+redisClient.isOpen = () => isConnected;
 
 module.exports = redisClient;
