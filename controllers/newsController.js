@@ -1,10 +1,21 @@
 const pool = require('../db');
 const { logAction } = require('../utils/logger');
+const redis = require('../utils/redis');
 
 // Get all news
 const getNews = async (req, res) => {
     try {
+        const cacheKey = 'news:all';
+        if (redis.isOpen) {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                return res.json({ success: true, data: JSON.parse(cached) });
+            }
+        }
         const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC');
+        if (redis.isOpen) {
+            await redis.setEx(cacheKey, 60, JSON.stringify(result.rows));
+        }
         res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error fetching news:', error);
@@ -37,6 +48,10 @@ const addNews = async (req, res) => {
             category
         });
 
+        if (redis.isOpen) {
+            const keys = await redis.keys('news*');
+            for (const key of keys) await redis.del(key);
+        }
         res.json({ success: true, data: newItem });
     } catch (error) {
         console.error('Error adding news:', error);
@@ -58,6 +73,10 @@ const deleteNews = async (req, res) => {
         // Log action
         await logAction('NEWS_DELETED', 'news', id);
 
+        if (redis.isOpen) {
+            const keys = await redis.keys('news*');
+            for (const key of keys) await redis.del(key);
+        }
         res.json({ success: true, message: 'News deleted successfully' });
     } catch (error) {
         console.error('Error deleting news:', error);

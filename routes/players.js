@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
+const { searchLimiter } = require('../middleware/limiter');
 const {
     getPlayers,
     searchPlayers,
@@ -11,7 +12,7 @@ const {
 
 // Public routes
 router.get('/', getPlayers);
-router.get('/search', searchPlayers);
+router.get('/search', searchLimiter, searchPlayers);
 
 // Protected routes
 router.post('/', authMiddleware, addPlayer);

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { comparePassword, hashPassword } = require('../utils/hash');
 
+
 // Login (Password Only)
 router.post('/login', async (req, res) => {
     try {

@@ -1,29 +1,35 @@
 const pool = require('../db');
 const { logAction } = require('../utils/logger');
+const redis = require('../utils/redis');
 
 // Get all players with pagination and sorting
 const getPlayers = async (req, res) => {
     try {
         const { page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
         const offset = (page - 1) * limit;
-
-        // Validate sort column to prevent SQL injection
-        // Validate sort column to prevent SQL injection
         let sortColumn = 'rapid_rating';
         if (sortBy === 'name') {
             sortColumn = 'last_name, first_name';
-        } else if (['first_name', 'last_name', 'rapid_rating', 'birth_year', 'id'].includes(sortBy)) {
+        } else if (["first_name", "last_name", "rapid_rating", "birth_year", "id"].includes(sortBy)) {
             sortColumn = sortBy;
         }
         const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-
+        const cacheKey = `players:${page}:${limit}:${sortBy}:${order}`;
+        if (redis.isOpen) {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                return res.json({ success: true, data: JSON.parse(cached) });
+            }
+        }
         const query = `
             SELECT * FROM players 
             ORDER BY ${sortColumn} ${sortOrder} 
             LIMIT $1 OFFSET $2
         `;
-
         const result = await pool.query(query, [limit, offset]);
+        if (redis.isOpen) {
+            await redis.setEx(cacheKey, 60, JSON.stringify(result.rows));
+        }
         res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error fetching players:', error);
@@ -125,6 +131,12 @@ const addPlayer = async (req, res) => {
             rating: rapidRating
         });
 
+        if (redis.isOpen) {
+            const keys = await redis.keys('players*');
+            for (const key of keys) await redis.del(key);
+            const searchKeys = await redis.keys('search*');
+            for (const key of searchKeys) await redis.del(key);
+        }
         res.json({ success: true, data: newPlayer });
     } catch (error) {
         if (error.code === '23505') {
@@ -163,6 +175,12 @@ const updatePlayer = async (req, res) => {
             rating: rapidRating
         });
 
+        if (redis.isOpen) {
+            const keys = await redis.keys('players*');
+            for (const key of keys) await redis.del(key);
+            const searchKeys = await redis.keys('search*');
+            for (const key of searchKeys) await redis.del(key);
+        }
         res.json({ success: true, data: updatedPlayer });
     } catch (error) {
         console.error('Error updating player:', error);
@@ -184,6 +202,12 @@ const deletePlayer = async (req, res) => {
         // Log action
         await logAction('PLAYER_DELETED', 'player', id);
 
+        if (redis.isOpen) {
+            const keys = await redis.keys('players*');
+            for (const key of keys) await redis.del(key);
+            const searchKeys = await redis.keys('search*');
+            for (const key of searchKeys) await redis.del(key);
+        }
         res.json({ success: true, message: 'Player deleted successfully' });
     } catch (error) {
         console.error('Error deleting player:', error);
