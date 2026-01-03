@@ -4,7 +4,7 @@
     "description": "Backend API for Chess Ratings app",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js",
+        "start": "node safe-start.js",
         "dev": "nodemon index.js",
         "init-db": "node init-db.js"
     },
