@@ -18,11 +18,11 @@ app.use('/api/news', newsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/status', statusRoutes);
 app.get('/', (req, res) => {
-    res.json({
-        message: 'Chess Ratings API',
-        version: '1.0.0',
-        status: 'running'
-    });
+  res.json({
+    message: 'Chess Ratings API',
+    version: '1.0.0',
+    status: 'running'
+  });
 });
 app.get('/api/download-seed', async (req, res) => {
   try {
@@ -35,5 +35,5 @@ app.get('/api/download-seed', async (req, res) => {
   }
 });
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
