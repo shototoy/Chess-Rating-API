@@ -1,6 +1,5 @@
 const redis = require('../utils/redis');
 const pool = require('../db');
-const { logAction } = require('../utils/logger');
 
 // Get all players with pagination and sorting
 const getPlayers = async (req, res) => {
@@ -125,8 +124,7 @@ const addPlayer = async (req, res) => {
         const result = await pool.query(query, values);
         const newPlayer = result.rows[0];
 
-        // Log action with full row data
-        await logAction('PLAYER_ADDED', 'player', newId, newPlayer);
+
 
         if (redis.isOpen) {
             const keys = await redis.keys('players*');
@@ -166,8 +164,7 @@ const updatePlayer = async (req, res) => {
 
         const updatedPlayer = result.rows[0];
 
-        // Log action with full row data
-        await logAction('PLAYER_UPDATED', 'player', id, updatedPlayer);
+
 
         if (redis.isOpen) {
             const keys = await redis.keys('players*');
@@ -193,8 +190,7 @@ const deletePlayer = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Player not found' });
         }
 
-        // Log action
-        await logAction('PLAYER_DELETED', 'player', id);
+
 
         if (redis.isOpen) {
             const keys = await redis.keys('players*');

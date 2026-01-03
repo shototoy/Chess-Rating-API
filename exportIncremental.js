@@ -24,14 +24,14 @@ async function exportInserts() {
       const rowId = log.row_id;
       const action = log.action;
       const data = log.data || {};
-      if (action === 'add') {
+      if (action === 'added') {
         // Build INSERT
         const columns = Object.keys(data).map(col => `"${col}"`).join(', ');
         const values = Object.values(data).map(val =>
           val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`
         ).join(', ');
         sql += `INSERT INTO ${table} (${columns}) VALUES (${values}) ON CONFLICT DO NOTHING;\n`;
-      } else if (action === 'update') {
+      } else if (action === 'updated') {
         // Build UPDATE
         const setClause = Object.entries(data)
           .map(([col, val]) => `"${col}" = ${val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`}`)

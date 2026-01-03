@@ -1,6 +1,4 @@
 const pool = require('../db');
-const { logAction } = require('../utils/logger');
-
 const redis = require('../utils/redis');
 
 // Get all news
@@ -43,8 +41,7 @@ const addNews = async (req, res) => {
         const result = await pool.query(query, values);
         const newItem = result.rows[0];
 
-        // Log action with full row data
-        await logAction('NEWS_ADDED', 'news', newItem.id, newItem);
+
 
         if (redis.isOpen) {
             const keys = await redis.keys('news*');
@@ -68,8 +65,7 @@ const deleteNews = async (req, res) => {
             return res.status(404).json({ success: false, error: 'News item not found' });
         }
 
-        // Log action
-        await logAction('NEWS_DELETED', 'news', id);
+
 
         if (redis.isOpen) {
             const keys = await redis.keys('news*');
