@@ -1,8 +1,8 @@
 const rateLimit = require('express-rate-limit');
 const searchLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    // 30 requests per 10 minutes per IP for public endpoints (search, etc.)
-    max: 500,
+    windowMs: 5 * 60 * 1000,
+    // 600 requests per 5 minutes per IP for public endpoints (search, etc.)
+    max: 600,
     message: {
         success: false,
         error: 'Too many requests from this IP. Please try again later.'
