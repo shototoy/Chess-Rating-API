@@ -14,22 +14,43 @@ const getPlayers = async (req, res) => {
         }
         const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         const cacheKey = `players:${page}:${limit}:${sortBy}:${order}`;
+
         if (redis.isOpen) {
             const cached = await redis.get(cacheKey);
             if (cached) {
-                return res.json({ success: true, data: JSON.parse(cached) });
+                // Check if cached data has the new structure { data: [], total: 123 }
+                // If it's old array format, we might need to invalidate/re-fetch or just handle it.
+                // For safety vs old keys, let's parse and check.
+                const parsed = JSON.parse(cached);
+                if (parsed.data && parsed.total !== undefined) {
+                    return res.json({ success: true, data: parsed.data, total: parsed.total });
+                }
+                // If old format (just array), fall through to DB fetch to get total
             }
         }
+
+        // Parallel fetch for data and count
         const query = `
             SELECT * FROM players 
             ORDER BY ${sortColumn} ${sortOrder} 
             LIMIT $1 OFFSET $2
         `;
-        const result = await pool.query(query, [limit, offset]);
+
+        const countQuery = `SELECT COUNT(*) FROM players`;
+
+        const [result, countResult] = await Promise.all([
+            pool.query(query, [limit, offset]),
+            pool.query(countQuery)
+        ]);
+
+        const total = parseInt(countResult.rows[0].count);
+
         if (redis.isOpen) {
-            await redis.setEx(cacheKey, 60, JSON.stringify(result.rows));
+            // Cache the object { data, total }
+            await redis.setEx(cacheKey, 60, JSON.stringify({ data: result.rows, total }));
         }
-        res.json({ success: true, data: result.rows });
+
+        res.json({ success: true, data: result.rows, total });
     } catch (error) {
         console.error('Error fetching players:', error);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -40,18 +61,16 @@ const getPlayers = async (req, res) => {
 const searchPlayers = async (req, res) => {
     try {
         const { q, page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
-        if (!q) return res.json({ success: true, data: [] });
+        if (!q) return res.json({ success: true, data: [], total: 0 });
 
         const offset = (page - 1) * limit;
 
         // Validate sort column
         const validColumns = ['first_name', 'last_name', 'rapid_rating'];
-        // Map frontend sort keys to DB columns if needed, assuming 'name' -> 'last_name' or similar logic
-        // But for simplicity let's stick to what we use: 'name' usually implies sorting by last_name then first_name
         let sortColumn = 'rapid_rating';
 
         if (sortBy === 'name') {
-            sortColumn = 'last_name, first_name'; // Multi-column sort
+            sortColumn = 'last_name, first_name';
         } else if (sortBy === 'rapid') {
             sortColumn = 'rapid_rating';
         } else if (validColumns.includes(sortBy)) {
@@ -69,8 +88,23 @@ const searchPlayers = async (req, res) => {
             ORDER BY ${sortColumn} ${sortOrder}
             LIMIT $2 OFFSET $3
         `;
-        const result = await pool.query(query, [`%${q}%`, limit, offset]);
-        res.json({ success: true, data: result.rows });
+
+        const countQuery = `
+            SELECT COUNT(*) FROM players 
+            WHERE 
+                LOWER(first_name) LIKE LOWER($1) OR 
+                LOWER(last_name) LIKE LOWER($1) OR 
+                id LIKE $1
+        `;
+
+        const [result, countResult] = await Promise.all([
+            pool.query(query, [`%${q}%`, limit, offset]),
+            pool.query(countQuery, [`%${q}%`])
+        ]);
+
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({ success: true, data: result.rows, total });
     } catch (error) {
         console.error('Error searching players:', error);
         res.status(500).json({ success: false, error: 'Server error' });
