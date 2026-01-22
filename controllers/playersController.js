@@ -6,6 +6,7 @@ const getPlayers = async (req, res) => {
     try {
         const { page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
         const offset = (page - 1) * limit;
+        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         let sortColumn = 'rapid_rating';
         if (sortBy === 'name') {
             // Apply direction to both columns for consistent alphabetical sorting
