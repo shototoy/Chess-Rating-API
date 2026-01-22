@@ -8,11 +8,14 @@ const getPlayers = async (req, res) => {
         const offset = (page - 1) * limit;
         let sortColumn = 'rapid_rating';
         if (sortBy === 'name') {
-            sortColumn = 'last_name, first_name';
+            // Apply direction to both columns for consistent alphabetical sorting
+            sortColumn = `last_name ${sortOrder}, first_name ${sortOrder}`;
         } else if (["first_name", "last_name", "standard_rating", "rapid_rating", "blitz_rating", "birth_year", "id"].includes(sortBy)) {
-            sortColumn = sortBy;
+            sortColumn = `${sortBy} ${sortOrder}`;
+        } else {
+            sortColumn = `rapid_rating ${sortOrder}`;
         }
-        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
         const cacheKey = `players:${page}:${limit}:${sortBy}:${order}`;
 
         if (redis.isOpen) {
@@ -32,7 +35,7 @@ const getPlayers = async (req, res) => {
         // Parallel fetch for data and count
         const query = `
             SELECT * FROM players 
-            ORDER BY ${sortColumn} ${sortOrder} 
+            ORDER BY ${sortColumn}
             LIMIT $1 OFFSET $2
         `;
 
@@ -69,19 +72,21 @@ const searchPlayers = async (req, res) => {
         const validColumns = ['first_name', 'last_name', 'standard_rating', 'rapid_rating', 'blitz_rating'];
         let sortColumn = 'rapid_rating';
 
-        if (sortBy === 'name') {
-            sortColumn = 'last_name, first_name';
-        } else if (sortBy === 'rapid') {
-            sortColumn = 'rapid_rating';
-        } else if (sortBy === 'standard') {
-            sortColumn = 'standard_rating';
-        } else if (sortBy === 'blitz') {
-            sortColumn = 'blitz_rating';
-        } else if (validColumns.includes(sortBy)) {
-            sortColumn = sortBy;
-        }
-
         const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+        if (sortBy === 'name') {
+            sortColumn = `last_name ${sortOrder}, first_name ${sortOrder}`;
+        } else if (sortBy === 'rapid') {
+            sortColumn = `rapid_rating ${sortOrder}`;
+        } else if (sortBy === 'standard') {
+            sortColumn = `standard_rating ${sortOrder}`;
+        } else if (sortBy === 'blitz') {
+            sortColumn = `blitz_rating ${sortOrder}`;
+        } else if (validColumns.includes(sortBy)) {
+            sortColumn = `${sortBy} ${sortOrder}`;
+        } else {
+            sortColumn = `rapid_rating ${sortOrder}`;
+        }
 
         const query = `
             SELECT * FROM players 
@@ -89,7 +94,7 @@ const searchPlayers = async (req, res) => {
                 LOWER(first_name) LIKE LOWER($1) OR 
                 LOWER(last_name) LIKE LOWER($1) OR 
                 id LIKE $1
-            ORDER BY ${sortColumn} ${sortOrder}
+            ORDER BY ${sortColumn}
             LIMIT $2 OFFSET $3
         `;
 
