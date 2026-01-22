@@ -9,7 +9,7 @@ const getPlayers = async (req, res) => {
         let sortColumn = 'rapid_rating';
         if (sortBy === 'name') {
             sortColumn = 'last_name, first_name';
-        } else if (["first_name", "last_name", "rapid_rating", "birth_year", "id"].includes(sortBy)) {
+        } else if (["first_name", "last_name", "standard_rating", "rapid_rating", "blitz_rating", "birth_year", "id"].includes(sortBy)) {
             sortColumn = sortBy;
         }
         const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
@@ -66,13 +66,17 @@ const searchPlayers = async (req, res) => {
         const offset = (page - 1) * limit;
 
         // Validate sort column
-        const validColumns = ['first_name', 'last_name', 'rapid_rating'];
+        const validColumns = ['first_name', 'last_name', 'standard_rating', 'rapid_rating', 'blitz_rating'];
         let sortColumn = 'rapid_rating';
 
         if (sortBy === 'name') {
             sortColumn = 'last_name, first_name';
         } else if (sortBy === 'rapid') {
             sortColumn = 'rapid_rating';
+        } else if (sortBy === 'standard') {
+            sortColumn = 'standard_rating';
+        } else if (sortBy === 'blitz') {
+            sortColumn = 'blitz_rating';
         } else if (validColumns.includes(sortBy)) {
             sortColumn = sortBy;
         }
@@ -114,7 +118,7 @@ const searchPlayers = async (req, res) => {
 // Add player
 const addPlayer = async (req, res) => {
     try {
-        const { firstName, lastName, title, rapidRating, bYear } = req.body;
+        const { firstName, lastName, title, standardRating, rapidRating, blitzRating, bYear } = req.body;
 
         // Basic validation
         if (!firstName || !lastName || !rapidRating) {
@@ -149,12 +153,12 @@ const addPlayer = async (req, res) => {
         const newId = `${letter}${nextNum.toString().padStart(5, '0')}`;
 
         const query = `
-            INSERT INTO players (id, first_name, last_name, title, rapid_rating, birth_year)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO players (id, first_name, last_name, title, standard_rating, rapid_rating, blitz_rating, birth_year)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
 
-        const values = [newId, firstName, lastName, title || '', rapidRating, bYear || null];
+        const values = [newId, firstName, lastName, title || '', standardRating || 0, rapidRating, blitzRating || 0, bYear || null];
         const result = await pool.query(query, values);
         const newPlayer = result.rows[0];
 
@@ -180,16 +184,16 @@ const addPlayer = async (req, res) => {
 const updatePlayer = async (req, res) => {
     try {
         const { id } = req.params;
-        const { firstName, lastName, title, rapidRating, bYear } = req.body;
+        const { firstName, lastName, title, standardRating, rapidRating, blitzRating, bYear } = req.body;
 
         const query = `
             UPDATE players 
-            SET first_name = $1, last_name = $2, title = $3, rapid_rating = $4, birth_year = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6
+            SET first_name = $1, last_name = $2, title = $3, standard_rating = $4, rapid_rating = $5, blitz_rating = $6, birth_year = $7, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $8
             RETURNING *
         `;
 
-        const values = [firstName, lastName, title, rapidRating, bYear || null, id];
+        const values = [firstName, lastName, title, standardRating || 0, rapidRating, blitzRating || 0, bYear || null, id];
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
