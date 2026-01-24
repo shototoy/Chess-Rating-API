@@ -6,55 +6,30 @@ const getPlayers = async (req, res) => {
     try {
         const { page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
         const offset = (page - 1) * limit;
-        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         let sortColumn = 'rapid_rating';
         if (sortBy === 'name') {
-            // Apply direction to both columns for consistent alphabetical sorting
-            sortColumn = `last_name ${sortOrder}, first_name ${sortOrder}`;
-        } else if (["first_name", "last_name", "standard_rating", "rapid_rating", "blitz_rating", "birth_year", "id"].includes(sortBy)) {
-            sortColumn = `${sortBy} ${sortOrder}`;
-        } else {
-            sortColumn = `rapid_rating ${sortOrder}`;
+            sortColumn = 'last_name, first_name';
+        } else if (["first_name", "last_name", "rapid_rating", "birth_year", "id"].includes(sortBy)) {
+            sortColumn = sortBy;
         }
-
+        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         const cacheKey = `players:${page}:${limit}:${sortBy}:${order}`;
-
         if (redis.isOpen) {
             const cached = await redis.get(cacheKey);
             if (cached) {
-                // Check if cached data has the new structure { data: [], total: 123 }
-                // If it's old array format, we might need to invalidate/re-fetch or just handle it.
-                // For safety vs old keys, let's parse and check.
-                const parsed = JSON.parse(cached);
-                if (parsed.data && parsed.total !== undefined) {
-                    return res.json({ success: true, data: parsed.data, total: parsed.total });
-                }
-                // If old format (just array), fall through to DB fetch to get total
+                return res.json({ success: true, data: JSON.parse(cached) });
             }
         }
-
-        // Parallel fetch for data and count
         const query = `
             SELECT * FROM players 
-            ORDER BY ${sortColumn}
+            ORDER BY ${sortColumn} ${sortOrder} 
             LIMIT $1 OFFSET $2
         `;
-
-        const countQuery = `SELECT COUNT(*) FROM players`;
-
-        const [result, countResult] = await Promise.all([
-            pool.query(query, [limit, offset]),
-            pool.query(countQuery)
-        ]);
-
-        const total = parseInt(countResult.rows[0].count);
-
+        const result = await pool.query(query, [limit, offset]);
         if (redis.isOpen) {
-            // Cache the object { data, total }
-            await redis.setEx(cacheKey, 60, JSON.stringify({ data: result.rows, total }));
+            await redis.setEx(cacheKey, 60, JSON.stringify(result.rows));
         }
-
-        res.json({ success: true, data: result.rows, total });
+        res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error fetching players:', error);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -65,29 +40,25 @@ const getPlayers = async (req, res) => {
 const searchPlayers = async (req, res) => {
     try {
         const { q, page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
-        if (!q) return res.json({ success: true, data: [], total: 0 });
+        if (!q) return res.json({ success: true, data: [] });
 
         const offset = (page - 1) * limit;
 
         // Validate sort column
-        const validColumns = ['first_name', 'last_name', 'standard_rating', 'rapid_rating', 'blitz_rating'];
+        const validColumns = ['first_name', 'last_name', 'rapid_rating'];
+        // Map frontend sort keys to DB columns if needed, assuming 'name' -> 'last_name' or similar logic
+        // But for simplicity let's stick to what we use: 'name' usually implies sorting by last_name then first_name
         let sortColumn = 'rapid_rating';
 
-        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-
         if (sortBy === 'name') {
-            sortColumn = `last_name ${sortOrder}, first_name ${sortOrder}`;
+            sortColumn = 'last_name, first_name'; // Multi-column sort
         } else if (sortBy === 'rapid') {
-            sortColumn = `rapid_rating ${sortOrder}`;
-        } else if (sortBy === 'standard') {
-            sortColumn = `standard_rating ${sortOrder}`;
-        } else if (sortBy === 'blitz') {
-            sortColumn = `blitz_rating ${sortOrder}`;
+            sortColumn = 'rapid_rating';
         } else if (validColumns.includes(sortBy)) {
-            sortColumn = `${sortBy} ${sortOrder}`;
-        } else {
-            sortColumn = `rapid_rating ${sortOrder}`;
+            sortColumn = sortBy;
         }
+
+        const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         const query = `
             SELECT * FROM players 
@@ -95,26 +66,11 @@ const searchPlayers = async (req, res) => {
                 LOWER(first_name) LIKE LOWER($1) OR 
                 LOWER(last_name) LIKE LOWER($1) OR 
                 id LIKE $1
-            ORDER BY ${sortColumn}
+            ORDER BY ${sortColumn} ${sortOrder}
             LIMIT $2 OFFSET $3
         `;
-
-        const countQuery = `
-            SELECT COUNT(*) FROM players 
-            WHERE 
-                LOWER(first_name) LIKE LOWER($1) OR 
-                LOWER(last_name) LIKE LOWER($1) OR 
-                id LIKE $1
-        `;
-
-        const [result, countResult] = await Promise.all([
-            pool.query(query, [`%${q}%`, limit, offset]),
-            pool.query(countQuery, [`%${q}%`])
-        ]);
-
-        const total = parseInt(countResult.rows[0].count);
-
-        res.json({ success: true, data: result.rows, total });
+        const result = await pool.query(query, [`%${q}%`, limit, offset]);
+        res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error searching players:', error);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -124,7 +80,7 @@ const searchPlayers = async (req, res) => {
 // Add player
 const addPlayer = async (req, res) => {
     try {
-        const { firstName, lastName, title, standardRating, rapidRating, blitzRating, bYear } = req.body;
+        const { firstName, lastName, title, rapidRating, bYear } = req.body;
 
         // Basic validation
         if (!firstName || !lastName || !rapidRating) {
@@ -159,12 +115,12 @@ const addPlayer = async (req, res) => {
         const newId = `${letter}${nextNum.toString().padStart(5, '0')}`;
 
         const query = `
-            INSERT INTO players (id, first_name, last_name, title, standard_rating, rapid_rating, blitz_rating, birth_year)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO players (id, first_name, last_name, title, rapid_rating, birth_year)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
 
-        const values = [newId, firstName, lastName, title || '', standardRating || 0, rapidRating, blitzRating || 0, bYear || null];
+        const values = [newId, firstName, lastName, title || '', rapidRating, bYear || null];
         const result = await pool.query(query, values);
         const newPlayer = result.rows[0];
 
@@ -190,16 +146,16 @@ const addPlayer = async (req, res) => {
 const updatePlayer = async (req, res) => {
     try {
         const { id } = req.params;
-        const { firstName, lastName, title, standardRating, rapidRating, blitzRating, bYear } = req.body;
+        const { firstName, lastName, title, rapidRating, bYear } = req.body;
 
         const query = `
             UPDATE players 
-            SET first_name = $1, last_name = $2, title = $3, standard_rating = $4, rapid_rating = $5, blitz_rating = $6, birth_year = $7, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $8
+            SET first_name = $1, last_name = $2, title = $3, rapid_rating = $4, birth_year = $5, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6
             RETURNING *
         `;
 
-        const values = [firstName, lastName, title, standardRating || 0, rapidRating, blitzRating || 0, bYear || null, id];
+        const values = [firstName, lastName, title, rapidRating, bYear || null, id];
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
