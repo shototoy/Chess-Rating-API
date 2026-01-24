@@ -5,7 +5,6 @@ const pool = require('../db');
 const { comparePassword, hashPassword } = require('../utils/hash');
 
 
-// Login (Password Only)
 router.post('/login', async (req, res) => {
     try {
         const { password } = req.body;
@@ -14,7 +13,6 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Password required' });
         }
 
-        // Get the single admin row
         const result = await pool.query('SELECT * FROM admin LIMIT 1');
 
         if (result.rows.length === 0) {
@@ -45,7 +43,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Verify token
 router.get('/verify', async (req, res) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -61,7 +58,6 @@ router.get('/verify', async (req, res) => {
     }
 });
 
-// Register (one-time setup - remove in production)
 router.post('/register', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -79,7 +75,7 @@ router.post('/register', async (req, res) => {
 
         res.json({ success: true, admin: result.rows[0] });
     } catch (error) {
-        if (error.code === '23505') { // Unique violation
+        if (error.code === '23505') {
             return res.status(400).json({ success: false, error: 'Username already exists' });
         }
         console.error('Register error:', error);

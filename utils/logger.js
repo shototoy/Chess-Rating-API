@@ -4,7 +4,6 @@ const logAction = async (action, entityType = null, entityId = null, details = n
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ACTION: ${action} | ENTITY: ${entityType} (${entityId}) | DETAILS:`, details ? JSON.stringify(details) : 'None');
 
-    // Only log to DB for add/update actions
     if (['PLAYER_ADDED', 'PLAYER_UPDATED', 'NEWS_ADDED', 'NEWS_UPDATED'].includes(action)) {
         try {
             await pool.query(

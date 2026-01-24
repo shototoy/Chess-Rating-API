@@ -13,7 +13,6 @@ const startServer = async () => {
     try {
         console.log('🔌 Checking database status...');
 
-        // Check if players table exists
         const res = await client.query(`
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
@@ -34,7 +33,6 @@ const startServer = async () => {
             console.log('✅ Database already populated. Skipping seed.');
         }
 
-        // ALWAYS ensure triggers are set up
         console.log('🔫 Applying triggers...');
         const triggersPath = path.join(__dirname, 'triggers.sql');
 
@@ -47,7 +45,6 @@ const startServer = async () => {
 
         await client.query(triggersSql);
 
-        // Verify triggers were created
         const verification = await client.query(`
             SELECT COUNT(*) as count 
             FROM information_schema.triggers 
@@ -64,13 +61,12 @@ const startServer = async () => {
     } catch (error) {
         console.error('❌ Startup initialization failed:', error);
         console.error('Stack:', error.stack);
-        throw error; // Re-throw to prevent server from starting
+        throw error;
     } finally {
         client.release();
     }
 };
 
-// Run the checks, then start the server
 startServer()
     .then(() => {
         console.log('🚀 Starting Express Server...');

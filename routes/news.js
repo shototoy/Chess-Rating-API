@@ -7,10 +7,10 @@ const {
     deleteNews
 } = require('../controllers/newsController');
 
-// Public routes
+
 router.get('/', getNews);
 
-// Protected routes
+
 router.post('/', authMiddleware, addNews);
 router.delete('/:id', authMiddleware, deleteNews);
 

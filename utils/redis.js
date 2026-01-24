@@ -24,7 +24,4 @@ redisClient.on('connect', () => {
     }
 })();
 
-// Native redis client has .isOpen property which handles the state correctly.
-// We do not need to override it.
-
 module.exports = redisClient;

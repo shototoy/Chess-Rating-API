@@ -10,11 +10,11 @@ const {
     deletePlayer
 } = require('../controllers/playersController');
 
-// Public routes
+
 router.get('/', getPlayers);
 router.get('/search', searchLimiter, searchPlayers);
 
-// Protected routes
+
 router.post('/', authMiddleware, addPlayer);
 router.put('/:id', authMiddleware, updatePlayer);
 router.delete('/:id', authMiddleware, deletePlayer);

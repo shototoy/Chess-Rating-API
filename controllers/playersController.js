@@ -1,7 +1,6 @@
 const redis = require('../utils/redis');
 const pool = require('../db');
 
-// Get all players with pagination and sorting
 const getPlayers = async (req, res) => {
     try {
         const { page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
@@ -36,7 +35,6 @@ const getPlayers = async (req, res) => {
     }
 };
 
-// Search players with pagination
 const searchPlayers = async (req, res) => {
     try {
         const { q, page = 1, limit = 50, sortBy = 'rapid_rating', order = 'desc' } = req.query;
@@ -44,14 +42,11 @@ const searchPlayers = async (req, res) => {
 
         const offset = (page - 1) * limit;
 
-        // Validate sort column
         const validColumns = ['first_name', 'last_name', 'rapid_rating'];
-        // Map frontend sort keys to DB columns if needed, assuming 'name' -> 'last_name' or similar logic
-        // But for simplicity let's stick to what we use: 'name' usually implies sorting by last_name then first_name
         let sortColumn = 'rapid_rating';
 
         if (sortBy === 'name') {
-            sortColumn = 'last_name, first_name'; // Multi-column sort
+            sortColumn = 'last_name, first_name';
         } else if (sortBy === 'rapid') {
             sortColumn = 'rapid_rating';
         } else if (validColumns.includes(sortBy)) {
@@ -77,22 +72,19 @@ const searchPlayers = async (req, res) => {
     }
 };
 
-// Add player
 const addPlayer = async (req, res) => {
     try {
         const { firstName, lastName, title, rapidRating, bYear } = req.body;
 
-        // Basic validation
+
         if (!firstName || !lastName || !rapidRating) {
             return res.status(400).json({ success: false, error: 'Missing required fields' });
         }
 
-        // Generate ID based on Last Name
+
         const letter = lastName.charAt(0).toUpperCase();
 
-        // Find the latest ID that starts with this letter
-        // We look for patterns like 'P%' and order by length desc, then alphabetically desc to catch 'P10000' > 'P9999' correctly if needed
-        // But simply casting substring to int is safer if format is consistent.
+
         const idQuery = `
             SELECT id FROM players 
             WHERE id LIKE $1 
@@ -104,14 +96,13 @@ const addPlayer = async (req, res) => {
         let nextNum = 1;
         if (idResult.rows.length > 0) {
             const lastId = idResult.rows[0].id;
-            // Assuming format L00000
             const numPart = parseInt(lastId.substring(1));
             if (!isNaN(numPart)) {
                 nextNum = numPart + 1;
             }
         }
 
-        // Pad with 5 zeros
+
         const newId = `${letter}${nextNum.toString().padStart(5, '0')}`;
 
         const query = `
@@ -142,7 +133,6 @@ const addPlayer = async (req, res) => {
     }
 };
 
-// Update player
 const updatePlayer = async (req, res) => {
     try {
         const { id } = req.params;
@@ -179,7 +169,6 @@ const updatePlayer = async (req, res) => {
     }
 };
 
-// Delete player
 const deletePlayer = async (req, res) => {
     try {
         const { id } = req.params;

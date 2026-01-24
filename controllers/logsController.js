@@ -1,6 +1,5 @@
 const pool = require('../db');
 
-// Get recent server logs
 const getLogs = async (req, res) => {
     try {
         const query = 'SELECT * FROM server_logs ORDER BY created_at DESC LIMIT 50';

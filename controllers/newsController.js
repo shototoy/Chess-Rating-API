@@ -1,7 +1,6 @@
 const pool = require('../db');
 const redis = require('../utils/redis');
 
-// Get all news
 const getNews = async (req, res) => {
     try {
         const cacheKey = 'news:all';
@@ -22,7 +21,6 @@ const getNews = async (req, res) => {
     }
 };
 
-// Add news
 const addNews = async (req, res) => {
     try {
         const { title, subtitle, category, body } = req.body;
@@ -54,7 +52,6 @@ const addNews = async (req, res) => {
     }
 };
 
-// Delete news
 const deleteNews = async (req, res) => {
     try {
         const { id } = req.params;

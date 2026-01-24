@@ -1,6 +1,5 @@
 const pool = require('../db');
 
-// Get app status (maintenance mode, etc.)
 const getStatus = async (req, res) => {
     try {
         const result = await pool.query(
@@ -12,23 +11,20 @@ const getStatus = async (req, res) => {
         res.json({ maintenanceMode });
     } catch (error) {
         console.error('Error fetching app status:', error);
-        // Return false on error to allow app to load
+        console.error('Error fetching app status:', error);
         res.json({ maintenanceMode: false });
     }
 };
 
-// Toggle maintenance mode (public endpoint - no auth)
 const toggleMaintenance = async (req, res) => {
     try {
-        // Get current state
         const currentState = await pool.query(
             'SELECT maintenance_mode FROM app_settings ORDER BY id LIMIT 1'
         );
 
         const currentMode = currentState.rows.length > 0 ? currentState.rows[0].maintenance_mode : false;
-        const newMode = !currentMode; // Toggle
+        const newMode = !currentMode;
 
-        // Update to opposite state
         await pool.query(
             'UPDATE app_settings SET maintenance_mode = $1, updated_at = CURRENT_TIMESTAMP',
             [newMode]
